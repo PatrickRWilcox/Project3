@@ -1,5 +1,9 @@
 package controller;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import model.Board;
 import model.Game;
 import model.Location;
 import model.NotImplementedException;
@@ -13,15 +17,18 @@ public class DumbAI extends Controller {
 
 	public DumbAI(Player me) {
 		super(me);
-		// TODO Auto-generated constructor stub
-		throw new NotImplementedException();
 	}
 
 	protected @Override Location nextMove(Game g) {
-		// Note: Calling delay here will make the CLUI work a little more
-		// nicely when competing different AIs against each other.
-		
-		// TODO Auto-generated method stub
-		throw new NotImplementedException();
+		Location l = null;
+		for(int x = 0; x < g.getBoard().NUM_ROWS; x++) {
+			for(int y = 0; y < g.getBoard().NUM_COLS; y++) {
+				if(l == null) {
+					if(g.getBoard().get(x, y) == null)
+						l = new Location(x, y);
+				}
+			}
+		}
+		return l;
 	}
 }
