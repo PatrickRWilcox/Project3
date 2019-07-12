@@ -110,10 +110,12 @@ public abstract class MinMaxAI extends Controller {
 	private class Node<E> {
 		 private int score;
 		 private Node pred;
+		 private Location spot;
 		 
-		 private Node(Node p, int score) {
+		 private Node(Node pred, int score, Location spot) {
 			 this.score = score;
-			 this.pred = p;
+			 this.pred = pred;
+			 this.spot = spot;
 		 }
 	}
 }
