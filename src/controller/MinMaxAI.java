@@ -1,5 +1,9 @@
 package controller;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.eclipse.jdt.annotation.NonNull;
 
 import model.Board;
@@ -55,7 +59,6 @@ import model.Player;
  * the estimation of how good the board is for the given player.
  */
 public abstract class MinMaxAI extends Controller {
-
 	/**
 	 * Return an estimate of how good the given board is for me.
 	 * A result of infinity means I have won.  A result of negative infinity
@@ -69,6 +72,9 @@ public abstract class MinMaxAI extends Controller {
 	 */
 	protected abstract Iterable<Location> moves(Board b);
 	
+	private Player player;
+	
+	private int depth;
 	/**
 	 * Create an AI that will recursively search for the next move using the
 	 * minimax algorithm.  When searching for a move, the algorithm will look
@@ -79,8 +85,8 @@ public abstract class MinMaxAI extends Controller {
 	 */
 	protected MinMaxAI(Player me, int depth) {
 		super(me);
-		// TODO Auto-generated method stub
-		throw new NotImplementedException();
+		player = me;
+		this.depth = depth;
 	}
 
 	/**
@@ -88,7 +94,26 @@ public abstract class MinMaxAI extends Controller {
 	 * algorithm described above.
 	 */
 	protected @Override Location nextMove(Game g) {
-		// TODO Auto-generated method stub
+		Iterator<Location> available = moves(g.getBoard()).iterator();
+		List<Integer> scores = new ArrayList<>();
+		
+		
+		while(available.hasNext()) {
+			Game g2 = new Game(player);
+			
+		}
+		
+		
 		throw new NotImplementedException();
+	}
+	
+	private class Node<E> {
+		 private int score;
+		 private Node pred;
+		 
+		 private Node(Node p, int score) {
+			 this.score = score;
+			 this.pred = p;
+		 }
 	}
 }
