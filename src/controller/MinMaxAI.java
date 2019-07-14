@@ -95,27 +95,87 @@ public abstract class MinMaxAI extends Controller {
 	 */
 	protected @Override Location nextMove(Game g) {
 		Iterator<Location> available = moves(g.getBoard()).iterator();
-		List<Integer> scores = new ArrayList<>();
-		
+		List<Node> scores = new ArrayList<>();
 		
 		while(available.hasNext()) {
 			Game g2 = new Game(player);
-			
+			copyBoard(g, g2);
+			Location next = available.next();
+			g2.submitMove(me, next);
+			int tree_depth = depth;
+			while(tree_depth > 1) {
+				List<Node> opp_nodes = new ArrayList<>();
+				List<Node> your_nodes = new ArrayList<>();
+				Iterator<Location> opp_available = moves(g2.getBoard()).iterator();
+				while(opp_available.hasNext()) {
+					Game g3 = new Game(me.opponent());
+					copyBoard(g2, g3);
+					Location opp_next = opp_available.next();
+					g3.submitMove(me.opponent(), opp_next);
+					Node opp_n = new Node(estimate(g3.getBoard()), opp_next);
+					opp_nodes.add(opp_n);
+				}
+				g2.submitMove(me.opponent(), findMin(opp_nodes).spot);
+				Iterator<Location> your_available = moves(g2.getBoard()).iterator();
+				while(your_available.hasNext()) {
+					Game g4 = new Game(me);
+					copyBoard(g2, g4);
+					Location your_next = your_available.next();
+					g4.submitMove(me, your_next);
+					Node your_n = new Node(estimate(g4.getBoard()), your_next);
+					your_nodes.add(your_n);
+				}
+				//g2.submitMove(me, findMax(opp_nodes).spot);//
+			}
+			Node n = new Node(estimate(g2.getBoard()), next);
+			scores.add(n);
 		}
 		
-		
-		throw new NotImplementedException();
+		return findMax(scores).spot;
 	}
 	
 	private class Node<E> {
 		 private int score;
-		 private Node pred;
 		 private Location spot;
 		 
-		 private Node(Node pred, int score, Location spot) {
+		 private Node(int score, Location spot) {
 			 this.score = score;
-			 this.pred = pred;
 			 this.spot = spot;
 		 }
 	}
+	
+	private Node findMax(List<Node> nodes) {
+		Node max = nodes.get(0);
+		for(Node node: nodes) {
+			if(node.score > max.score)
+				max = node;
+		}
+		return max;
+	}
+	
+	private Node findMin(List<Node> nodes) {
+		Node min = nodes.get(0);
+		for(Node node: nodes) {
+			if(node.score < min.score)
+				min = node;
+		}
+		return min;
+	}
+	
+	private boolean greaterThan(int value, List<Node> nodes) {
+		for(Node node: nodes)
+			if (node.score > value)
+				return true;
+		return false;
+	}
+	
+	private void copyBoard(Game g, Game g2) {
+		for(int x = 0; x < g2.getBoard().NUM_COLS; x++) {
+			for(int y = 0; y < g2.getBoard().NUM_ROWS; y++) {
+				Location l = new Location(x,y);
+				g2.getBoard().update(g.getBoard().get(l), l);
+			}
+		}
+	}
+	
 }
