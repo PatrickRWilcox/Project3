@@ -94,6 +94,7 @@ public abstract class MinMaxAI extends Controller {
 		Iterator<Location> available = moves(g.getBoard()).iterator();
 		List<Node> scores = new ArrayList<>();
 		
+		
 		while(available.hasNext()) {
 			Board b = copyBoard(g);
 			Location next = available.next();
@@ -106,16 +107,18 @@ public abstract class MinMaxAI extends Controller {
 				while(opp_available.hasNext()) {
 					Board b2 = copyBoard(b);
 					Location opp_next = opp_available.next();
-					b2 = b2.update(me.opponent(), opp_next);
+					if(b2.getState() == State.NOT_OVER)
+						b2 = b2.update(me.opponent(), opp_next);
 					Node opp_n = new Node(estimate(b2), opp_next);
 					opp_nodes.add(opp_n);
 				}
-				b = b.update(me.opponent(), findMax(opp_nodes).spot);
+				b = b.update(me.opponent(), findMin(opp_nodes).spot);
 				Iterator<Location> your_available = moves(b).iterator();
 				while(your_available.hasNext()) {
 					Board b3 = copyBoard(b);
 					Location your_next = your_available.next();
-					b3 = b3.update(me, your_next);
+					if(b3.getState() == State.NOT_OVER)
+						b3 = b3.update(me, your_next);
 					Node your_n = new Node(estimate(b3), your_next);
 					your_nodes.add(your_n);
 				}
@@ -124,12 +127,9 @@ public abstract class MinMaxAI extends Controller {
 				tree_depth--;
 			}
 			Node n = new Node(estimate(b), next);
-			if(b.getState() == State.HAS_WINNER && b.getWinner().winner != me)
-				n.score = (int) Double.NEGATIVE_INFINITY;
+			
 			scores.add(n);
 		}
-		//print(scores);
-		//System.out.print(findMax(scores).score);
 		return findMax(scores).spot;
 	}
 	
@@ -166,7 +166,7 @@ public abstract class MinMaxAI extends Controller {
 		for(int x = 0; x < g.getBoard().NUM_COLS; x++) {
 			for(int y = 0; y < g.getBoard().NUM_ROWS; y++) {
 				Location l = new Location(y,x);
-				if(g.getBoard().get(l) != null)
+				if(g.getBoard().get(l) != null  && b.getState() == State.NOT_OVER)
 					b = b.update(g.getBoard().get(l), l);
 			}
 		}
@@ -178,7 +178,7 @@ public abstract class MinMaxAI extends Controller {
 		for(int x = 0; x < b.NUM_COLS; x++) {
 			for(int y = 0; y < b.NUM_ROWS; y++) {
 				Location l = new Location(y,x);
-				if(b.get(l) != null)
+				if(b.get(l) != null && b2.getState() == State.NOT_OVER)
 					b2 = b2.update(b.get(l), l);
 			}
 		}
