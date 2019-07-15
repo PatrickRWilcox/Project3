@@ -23,8 +23,8 @@ import org.eclipse.jdt.annotation.NonNull;
  */
 public class Game {
 	private List<GameListener> listeners;
-	private Player next;
-	private Board  board;
+	public Player next;
+	private Board board;
 
 	/** Create a game with an empty board; p goes first. */
 	public Game(Player p) {

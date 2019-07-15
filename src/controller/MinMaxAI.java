@@ -72,8 +72,6 @@ public abstract class MinMaxAI extends Controller {
 	 */
 	protected abstract Iterable<Location> moves(Board b);
 	
-	private Player player;
-	
 	private int depth;
 	/**
 	 * Create an AI that will recursively search for the next move using the
@@ -85,7 +83,6 @@ public abstract class MinMaxAI extends Controller {
 	 */
 	protected MinMaxAI(Player me, int depth) {
 		super(me);
-		player = me;
 		this.depth = depth;
 	}
 
@@ -98,47 +95,49 @@ public abstract class MinMaxAI extends Controller {
 		List<Node> scores = new ArrayList<>();
 		
 		while(available.hasNext()) {
-			Game g2 = new Game(player);
-			copyBoard(g, g2);
+			Board b = copyBoard(g);
 			Location next = available.next();
-			g2.submitMove(me, next);
+			b = b.update(me, next);
 			int tree_depth = depth;
-			while(tree_depth > 1) {
+			while(tree_depth > 1 && b.getState() == State.NOT_OVER) {
 				List<Node> opp_nodes = new ArrayList<>();
 				List<Node> your_nodes = new ArrayList<>();
-				Iterator<Location> opp_available = moves(g2.getBoard()).iterator();
+				Iterator<Location> opp_available = moves(b).iterator();
 				while(opp_available.hasNext()) {
-					Game g3 = new Game(me.opponent());
-					copyBoard(g2, g3);
+					Board b2 = copyBoard(b);
 					Location opp_next = opp_available.next();
-					g3.submitMove(me.opponent(), opp_next);
-					Node opp_n = new Node(estimate(g3.getBoard()), opp_next);
+					b2 = b2.update(me.opponent(), opp_next);
+					Node opp_n = new Node(estimate(b2), opp_next);
 					opp_nodes.add(opp_n);
 				}
-				g2.submitMove(me.opponent(), findMin(opp_nodes).spot);
-				Iterator<Location> your_available = moves(g2.getBoard()).iterator();
+				b = b.update(me.opponent(), findMax(opp_nodes).spot);
+				Iterator<Location> your_available = moves(b).iterator();
 				while(your_available.hasNext()) {
-					Game g4 = new Game(me);
-					copyBoard(g2, g4);
+					Board b3 = copyBoard(b);
 					Location your_next = your_available.next();
-					g4.submitMove(me, your_next);
-					Node your_n = new Node(estimate(g4.getBoard()), your_next);
+					b3 = b3.update(me, your_next);
+					Node your_n = new Node(estimate(b3), your_next);
 					your_nodes.add(your_n);
 				}
-				//g2.submitMove(me, findMax(opp_nodes).spot);//
+				if(b.getState() == State.NOT_OVER)
+					b = b.update(me, findMax(your_nodes).spot);					
+				tree_depth--;
 			}
-			Node n = new Node(estimate(g2.getBoard()), next);
+			Node n = new Node(estimate(b), next);
+			if(b.getState() == State.HAS_WINNER && b.getWinner().winner != me)
+				n.score = (int) Double.NEGATIVE_INFINITY;
 			scores.add(n);
 		}
-		
+		//print(scores);
+		//System.out.print(findMax(scores).score);
 		return findMax(scores).spot;
 	}
 	
-	private class Node<E> {
+	private class Node {
 		 private int score;
 		 private Location spot;
 		 
-		 private Node(int score, Location spot) {
+		Node(int score, Location spot) {
 			 this.score = score;
 			 this.spot = spot;
 		 }
@@ -162,20 +161,33 @@ public abstract class MinMaxAI extends Controller {
 		return min;
 	}
 	
-	private boolean greaterThan(int value, List<Node> nodes) {
-		for(Node node: nodes)
-			if (node.score > value)
-				return true;
-		return false;
-	}
-	
-	private void copyBoard(Game g, Game g2) {
-		for(int x = 0; x < g2.getBoard().NUM_COLS; x++) {
-			for(int y = 0; y < g2.getBoard().NUM_ROWS; y++) {
-				Location l = new Location(x,y);
-				g2.getBoard().update(g.getBoard().get(l), l);
+	private Board copyBoard(Game g) {
+		Board b = Board.EMPTY;
+		for(int x = 0; x < g.getBoard().NUM_COLS; x++) {
+			for(int y = 0; y < g.getBoard().NUM_ROWS; y++) {
+				Location l = new Location(y,x);
+				if(g.getBoard().get(l) != null)
+					b = b.update(g.getBoard().get(l), l);
 			}
 		}
+		return b;
+	}
+	
+	private Board copyBoard(Board b) {
+		Board b2 = Board.EMPTY;
+		for(int x = 0; x < b.NUM_COLS; x++) {
+			for(int y = 0; y < b.NUM_ROWS; y++) {
+				Location l = new Location(y,x);
+				if(b.get(l) != null)
+					b2 = b2.update(b.get(l), l);
+			}
+		}
+		return b2;
+	}
+	
+	private void print(List<Node> nodes) {
+		for(Node node: nodes)
+			System.out.println(node.score + " Loc: " + node.spot.toString());
 	}
 	
 }
