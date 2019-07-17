@@ -79,6 +79,10 @@ public abstract class MinMaxAI extends Controller {
 	 */
 	protected abstract Iterable<Location> moves(Board b);
 
+	/**
+	 * Holds the value depth that represents the number of moves the AI will look 
+	 * ahead when NextMove is called.
+	 */
 	private int depth;
 
 	/**
@@ -100,22 +104,8 @@ public abstract class MinMaxAI extends Controller {
 	 * described above.
 	 */
 	protected @Override Location nextMove(Game g) {
-		Iterator<Location> available = moves(g.getBoard()).iterator();
-		List<Node> nodes = new ArrayList<>();
-
-		while (available.hasNext()) {
-			Board b = copyBoard(g);
-			Location next = available.next();
-			b = b.update(me, next);
-			b = nextLayer(depth - 1, b);
-			Node n = new Node(estimate(b), next);
-			nodes.add(n);
-		}
-		
-		for(Node node: nodes) {
-			
-		}
-		return findMax(nodes).spot;
+		Node n = nextLayer(depth, g.getBoard(), me);
+		return n.spot;
 	}
 
 	/**
@@ -131,56 +121,22 @@ public abstract class MinMaxAI extends Controller {
 		/** Location spot stores the location that is played. */
 		private Location spot;
 
+		private Board board;
+
 		/**
 		 * Constructor to create a Node.
 		 * 
 		 * @param score int to set the score to.
 		 * @param spot  location of the move that was made.
 		 */
-		Node(int score, Location spot) {
+		Node(int score, Location spot, Board b) {
 			this.score = score;
 			this.spot = spot;
+			this.board = b;
 		}
 	}
 
-	/**
-	 * Finds the highest score out of all nodes in a list, then returns that node.
-	 * 
-	 * @param nodes List of Nodes to search.
-	 * @return The Node with the highest score, or null if the list is empty.
-	 */
-	private Node findMax(List<Node> nodes) {
-		if (nodes.size() > 0) {
-			Node max = nodes.get(0);
-			for (Node node : nodes) {
-				if (node.score > max.score)
-					max = node;
-			}
-			return max;
-		}
-		return null;
-	}
-
-	/**
-	 * Finds the highest score out of all nodes in a list, then returns that node.
-	 * 
-	 * @param nodes List of Nodes to search.
-	 * @return The Node with the highest score, or null if the list is empty.
-	 */
-	private Node findMin(List<Node> nodes) {
-		if (nodes.size() > 0) {
-			Node min = nodes.get(0);
-			for (Node node : nodes) {
-				if (node.score < min.score)
-					min = node;
-			}
-			return min;
-		}
-		return null;
-	}
-
-	/**
-	 * Copies board from Game g to a new empty Board and then returns it.
+	 /** Copies board from Game g to a new empty Board and then returns it.
 	 * 
 	 * @param g Game to have its board copied.
 	 * @return A new Board with the same configuration as Game g's board.
@@ -216,42 +172,71 @@ public abstract class MinMaxAI extends Controller {
 	}
 
 	/**
-	 * Recursively called to find the board configuration d moves ahead starting
-	 * from board b that gives Player me the highest score.
-	 * 
-	 * @param d int representing how many times to recur.
-	 * @param b Board initial configuration of the board.
-	 * @return A new Board object where each player has played d more moves.
+	 * This method finds the best move for player to make d moves into the future
+	 * starting from board b.
+	 * @param d number of moves to look forward as an int.
+	 * @param b the current configuration of the board to start looking 
+	 * into the future from.
+	 * @param player the player who's turn it is to make a move.
+	 * @return Node with the best possible score, or null if there are no nodes.
 	 */
-	private Board nextLayer(int d, Board b) {
-		if (d > 0 && b.getState() == State.NOT_OVER) {
-			b = nextLayer(d - 1, b);
-			List<Node> opp_nodes = new ArrayList<>();
-			List<Node> your_nodes = new ArrayList<>();
-			Iterator<Location> opp_available = moves(b).iterator();
-			while (opp_available.hasNext()) {
-				Board b2 = copyBoard(b);
-				Location opp_next = opp_available.next();
-				if (b2.getState() == State.NOT_OVER)
-					b2 = b2.update(me.opponent(), opp_next);
-				Node opp_n = new Node(estimate(b2), opp_next);
-				opp_nodes.add(opp_n);
+	private Node nextLayer(int d, Board b, Player player) {
+		Node node = new Node(estimate(b), null, b);
+		
+		//handler for base case
+		if (d == 1 && b.getState() == State.NOT_OVER) {
+			Iterator<Location> available = moves(b).iterator();
+			while (available.hasNext()) {
+				Location next = available.next();
+				Board b2 = b.update(player, next);
+				if (player == me) {
+					if(node.spot == null || estimate(b2) > node.score) {
+						node = new Node(estimate(b2), next, copyBoard(b2));
+					}
+				}
+				else {
+					if(node.spot == null || estimate(b2) < node.score) {
+						node = new Node(estimate(b2), next, copyBoard(b2));
+					}
+				}
 			}
-			if (b.getState() == State.NOT_OVER)
-				b = b.update(me.opponent(), findMin(opp_nodes).spot);
-			Iterator<Location> your_available = moves(b).iterator();
-			while (your_available.hasNext()) {
-				Board b3 = copyBoard(b);
-				Location your_next = your_available.next();
-				if (b3.getState() == State.NOT_OVER)
-					b3 = b3.update(me, your_next);
-				Node your_n = new Node(estimate(b3), your_next);
-				your_nodes.add(your_n);
+		} 
+		
+		//handler for when the game is not over and the execution has not 
+		//reached the base case.
+		else if (d > 1 && b.getState() == State.NOT_OVER) {
+			Iterator<Location> available = moves(b).iterator();
+			while (available.hasNext()) {
+				Location next = available.next(); 
+				Board b2 = b.update(player, next);
+				Node n2 = nextLayer(d - 1, copyBoard(b2), player.opponent());
+				Node n3 = new Node(estimate(copyBoard(n2.board)), next, b2);
+				if (player == me) {
+					if(node.spot == null || n3.score > node.score) {
+						node = n3;
+					}
+				}
+				else {
+					if(node.spot == null || n3.score < node.score) {
+						node = n3;
+					}
+				}
+			}	
+		} 
+		
+		//handles the states when the game is over
+		else if (b.getState() != State.NOT_OVER) {
+			if(b.getState() == State.DRAW) {
+				node = new Node(0, null, b);
 			}
-			if (b.getState() == State.NOT_OVER)
-				b = b.update(me, findMax(your_nodes).spot);
+			else if(b.getState() == State.HAS_WINNER && 
+					b.getWinner().winner == me) {
+				node = new Node(11150, null, b);
+			}
+			else {
+				node = new Node(-11150, null, b);
+			}
 		}
-		return b;
+		return node;
 	}
-
 }
